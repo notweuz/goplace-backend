@@ -254,8 +254,16 @@ func (s *PixelService) checkPlaceCooldown(user *model.User) (bool, time.Duration
 }
 
 func (s *PixelService) CheckIsUserAccountActive(user *model.User) error {
+	if user.Admin {
+		return nil
+	}
+
 	if !user.Active {
 		return fiber.NewError(fiber.StatusForbidden, "User account is deactivated")
 	}
+	if user.Banned {
+		return fiber.NewError(fiber.StatusForbidden, "User account is banned")
+	}
+
 	return nil
 }

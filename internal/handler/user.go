@@ -23,7 +23,7 @@ func (h *UserHandler) GetSelfInfo(c *fiber.Ctx) error {
 		return err
 	}
 
-	userDto := response.NewUserDto(user.ID, user.Username, user.LastPlaced, user.AmountPlaced, user.Admin)
+	userDto := response.NewUserDto(user.ID, user.Username, user.LastPlaced, user.AmountPlaced, user.Admin, user.Banned)
 	return c.JSON(userDto)
 }
 
@@ -55,7 +55,7 @@ func (h *UserHandler) UpdateUser(c *fiber.Ctx) error {
 		return err
 	}
 
-	userDto := response.NewUserDto(updatedUser.ID, updatedUser.Username, updatedUser.LastPlaced, updatedUser.AmountPlaced, updatedUser.Admin)
+	userDto := response.NewUserDto(updatedUser.ID, updatedUser.Username, updatedUser.LastPlaced, updatedUser.AmountPlaced, updatedUser.Admin, updatedUser.Banned)
 	return c.JSON(userDto)
 }
 
@@ -70,7 +70,7 @@ func (h *UserHandler) GetUserByID(c *fiber.Ctx) error {
 		return response.NewHttpError(fiber.StatusNotFound, "User not found", []string{err.Error()})
 	}
 
-	userDto := response.NewUserDto(user.ID, user.Username, user.LastPlaced, user.AmountPlaced, user.Admin)
+	userDto := response.NewUserDto(user.ID, user.Username, user.LastPlaced, user.AmountPlaced, user.Admin, user.Banned)
 	return c.JSON(userDto)
 }
 
@@ -85,7 +85,7 @@ func (h *UserHandler) GetUserByUsername(c *fiber.Ctx) error {
 		return response.NewHttpError(fiber.StatusNotFound, "User not found", []string{err.Error()})
 	}
 
-	userDto := response.NewUserDto(user.ID, user.Username, user.LastPlaced, user.AmountPlaced, user.Admin)
+	userDto := response.NewUserDto(user.ID, user.Username, user.LastPlaced, user.AmountPlaced, user.Admin, user.Banned)
 	return c.JSON(userDto)
 }
 
@@ -103,7 +103,7 @@ func (h *UserHandler) GetLeaderboard(c *fiber.Ctx) error {
 
 	userDTOs := make([]response.UserDto, len(users))
 	for i, user := range users {
-		userDTOs[i] = *response.NewUserDto(user.ID, user.Username, user.LastPlaced, user.AmountPlaced, user.Admin)
+		userDTOs[i] = *response.NewUserDto(user.ID, user.Username, user.LastPlaced, user.AmountPlaced, user.Admin, user.Banned)
 	}
 	leaderboardDto := response.UserListDto{Users: userDTOs}
 	return c.JSON(leaderboardDto)
