@@ -108,3 +108,17 @@ func (h *UserHandler) GetLeaderboard(c *fiber.Ctx) error {
 	leaderboardDto := response.UserListDto{Users: userDTOs}
 	return c.JSON(leaderboardDto)
 }
+
+func (h *UserHandler) BanUserById(c *fiber.Ctx) error {
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return response.NewHttpError(fiber.StatusBadRequest, "Invalid user ID", []string{err.Error()})
+	}
+
+	err = h.service.BanUserById(c, c.Context(), uint(id))
+	if err != nil {
+		return response.NewHttpError(fiber.StatusInternalServerError, "Failed to ban user", []string{err.Error()})
+	}
+
+	return nil
+}

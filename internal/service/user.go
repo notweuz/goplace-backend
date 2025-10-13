@@ -91,6 +91,30 @@ func (s *UserService) UpdateProfile(ctx context.Context, userID uint, username, 
 	return s.database.Update(ctx, currentUser)
 }
 
+func (s *UserService) BanUserById(c *fiber.Ctx, ctx context.Context, id uint) error {
+	requester, err := s.GetSelfInfo(c)
+	if err != nil {
+		return err
+	}
+
+	if !requester.Admin {
+		return fiber.NewError(fiber.StatusForbidden, "User needs to be admin to ban someone")
+	}
+
+	user, err := s.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	user.Banned = true
+	_, err = s.Update(ctx, user)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *UserService) ParseAndValidateToken(tokenString string) (*model.User, error) {
 	claims := &model.UserClaims{}
 

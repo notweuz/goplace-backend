@@ -21,4 +21,5 @@ func SetupUserRoutes(group fiber.Router, service *service.UserService) {
 	userGroup.Get("/leaderboard", userHandler.GetLeaderboard)
 	userGroup.Get("/username/:username", userHandler.GetUserByUsername)
 	userGroup.Get("/:id", userHandler.GetUserByID)
+	userGroup.Delete("/:id", authMiddleware, userHandler.BanUserById)
 }
