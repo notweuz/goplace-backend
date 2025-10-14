@@ -7,11 +7,15 @@ import (
 )
 
 type InfoHandler struct {
+	*BaseHandler
 	service *service.InfoService
 }
 
 func NewInfoHandler(service *service.InfoService) *InfoHandler {
-	return &InfoHandler{service: service}
+	return &InfoHandler{
+		BaseHandler: &BaseHandler{},
+		service:     service,
+	}
 }
 
 func (h *InfoHandler) GetPixelSheetInfo(ctx *fiber.Ctx) error {

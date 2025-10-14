@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"strings"
 
 	"pplace_backend/internal/config"
 	"pplace_backend/internal/database"
@@ -27,52 +27,70 @@ func NewUserService(db *gorm.DB, c *config.PPlaceConfig) *UserService {
 }
 
 func (s *UserService) Create(ctx context.Context, user *model.User) (*model.User, error) {
-	log.Info().Interface("id", user.ID).Msg("Created user")
+	log.Info().Uint("id", user.ID).Msg("Creating user")
 	return s.database.Create(ctx, user)
 }
 
 func (s *UserService) Update(ctx context.Context, user *model.User) (*model.User, error) {
-	log.Info().Interface("id", user.ID).Msg("Updated user")
+	log.Info().Uint("id", user.ID).Msg("Updating user")
 	return s.database.Update(ctx, user)
 }
 
 func (s *UserService) GetByID(ctx context.Context, id uint) (*model.User, error) {
-	log.Info().Uint("id", id).Msg("Getting user")
-	return s.database.GetById(ctx, id)
+	log.Info().Uint("id", id).Msg("Getting user by ID")
+	user, err := s.database.GetById(ctx, id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, model.NewNotFoundError("User not found")
+		}
+		return nil, model.NewInternalServerError("Failed to get user", err)
+	}
+	return user, nil
 }
 
 func (s *UserService) GetByUsername(ctx context.Context, username string) (*model.User, error) {
-	log.Info().Interface("username", username).Msg("Getting user")
-	return s.database.GetByUsername(ctx, username)
+	log.Info().Str("username", username).Msg("Getting user by username")
+	user, err := s.database.GetByUsername(ctx, username)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, model.NewInternalServerError("Failed to get user", err)
+	}
+	return user, nil
 }
 
 func (s *UserService) GetSelfInfo(c *fiber.Ctx) (*model.User, error) {
 	user, ok := c.Locals("user").(*model.User)
 	if !ok || user == nil {
-		log.Info().Interface("user", user).Msg("User not found in context")
-		return nil, fiber.NewError(fiber.StatusUnauthorized, "User not found in context")
+		log.Info().Msg("User not found in context")
+		return nil, model.NewUnauthorizedError("User not found in context")
 	}
-	log.Info().Interface("username", user.Username).Msg("User found in context")
+	log.Info().Str("username", user.Username).Msg("User found in context")
 	return user, nil
 }
 
 func (s *UserService) GetLeaderboard(ctx context.Context, page, size int) ([]model.User, error) {
 	log.Info().Int("page", page).Int("size", size).Msg("Getting leaderboard")
-	return s.database.GetLeaderboard(ctx, page, size)
+	users, err := s.database.GetLeaderboard(ctx, page, size)
+	if err != nil {
+		return nil, model.NewInternalServerError("Failed to get leaderboard", err)
+	}
+	return users, nil
 }
 
 func (s *UserService) UpdateProfile(ctx context.Context, userID uint, username, password string) (*model.User, error) {
 	currentUser, err := s.database.GetById(ctx, userID)
 	if err != nil || currentUser == nil {
-		log.Error().Err(err).Interface("user", userID).Msg("User not found in context")
-		return nil, fiber.NewError(fiber.StatusUnauthorized, fmt.Sprintf("user not found"))
+		log.Error().Err(err).Uint("userID", userID).Msg("User not found")
+		return nil, model.NewUnauthorizedError("User not found")
 	}
 
 	if username != "" {
 		existingUser, err := s.database.GetByUsername(ctx, username)
 		if err == nil && existingUser != nil && existingUser.ID != userID {
-			log.Error().Err(err).Interface("user", userID).Msg("User found in context")
-			return nil, fiber.NewError(fiber.StatusConflict, fmt.Sprintf("username already taken"))
+			log.Warn().Uint("userID", userID).Str("username", username).Msg("Username already taken")
+			return nil, model.NewConflictError("Username already taken")
 		}
 		currentUser.Username = username
 	}
@@ -80,15 +98,19 @@ func (s *UserService) UpdateProfile(ctx context.Context, userID uint, username, 
 	if password != "" {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 		if err != nil {
-			log.Error().Err(err).Interface("user", userID).Msg("Error hashing password")
-			return nil, fiber.NewError(fiber.StatusInternalServerError, "Error hashing password")
+			log.Error().Err(err).Uint("userID", userID).Msg("Error hashing password")
+			return nil, model.NewInternalServerError("Error hashing password", err)
 		}
 		currentUser.Password = hashedPassword
 		currentUser.TokenVersion++
 	}
 
-	log.Info().Interface("user", currentUser).Msg("Updating user")
-	return s.database.Update(ctx, currentUser)
+	log.Info().Uint("userID", userID).Msg("Updating user profile")
+	updatedUser, err := s.database.Update(ctx, currentUser)
+	if err != nil {
+		return nil, model.NewInternalServerError("Failed to update user profile", err)
+	}
+	return updatedUser, nil
 }
 
 func (s *UserService) BanUserById(c *fiber.Ctx, ctx context.Context, id uint) error {
@@ -98,7 +120,7 @@ func (s *UserService) BanUserById(c *fiber.Ctx, ctx context.Context, id uint) er
 	}
 
 	if !requester.Admin {
-		return fiber.NewError(fiber.StatusForbidden, "User needs to be admin to ban someone")
+		return model.NewForbiddenError("User needs to be admin to ban someone")
 	}
 
 	user, err := s.GetByID(ctx, id)
@@ -109,9 +131,10 @@ func (s *UserService) BanUserById(c *fiber.Ctx, ctx context.Context, id uint) er
 	user.Banned = true
 	_, err = s.Update(ctx, user)
 	if err != nil {
-		return err
+		return model.NewInternalServerError("Failed to ban user", err)
 	}
 
+	log.Info().Uint("userID", id).Msg("User banned successfully")
 	return nil
 }
 
@@ -120,22 +143,21 @@ func (s *UserService) ParseAndValidateToken(tokenString string) (*model.User, er
 
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fiber.NewError(fiber.StatusBadRequest,
-				fmt.Sprintf("unexpected signing method: %v", token.Header["alg"]))
+			return nil, model.NewBadRequestError("Unexpected signing method", fmt.Sprintf("unexpected signing method: %v", token.Header["alg"]))
 		}
 		return []byte(s.config.JWT.Secret), nil
 	})
 	if err != nil || !token.Valid {
-		return nil, fiber.NewError(fiber.StatusUnauthorized, "invalid token")
+		return nil, model.NewUnauthorizedError("Invalid token")
 	}
 
 	user, err := s.database.GetById(context.Background(), claims.ID)
 	if err != nil {
-		return nil, fiber.NewError(fiber.StatusNotFound, "User not found")
+		return nil, model.NewNotFoundError("User not found")
 	}
 
 	if claims.TokenVersion != user.TokenVersion {
-		return nil, fiber.NewError(fiber.StatusUnauthorized, "token invalidated")
+		return nil, model.NewUnauthorizedError("Token invalidated")
 	}
 
 	return user, nil
@@ -143,9 +165,11 @@ func (s *UserService) ParseAndValidateToken(tokenString string) (*model.User, er
 
 func (s *UserService) ExtractToken(c *fiber.Ctx) (string, error) {
 	header := c.Get("Authorization")
-	if !strings.HasPrefix(header, "Bearer ") {
-		log.Error().Interface("header", header).Msg("Error extracting token")
-		return "", fiber.NewError(fiber.StatusBadRequest, "Invalid Authorization header format")
+	const bearerPrefix = "Bearer "
+
+	if len(header) < len(bearerPrefix) || header[:len(bearerPrefix)] != bearerPrefix {
+		log.Error().Str("header", header).Msg("Invalid Authorization header format")
+		return "", model.NewBadRequestError("Invalid Authorization header format")
 	}
-	return strings.TrimPrefix(header, "Bearer "), nil
+	return header[len(bearerPrefix):], nil
 }

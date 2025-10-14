@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"pplace_backend/internal/model"
 	"pplace_backend/internal/model/dto/response"
 	"pplace_backend/internal/service"
 
@@ -11,12 +12,24 @@ func AuthMiddleware(userService *service.UserService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		tokenString, err := userService.ExtractToken(c)
 		if err != nil {
-			return response.NewHttpError(fiber.StatusUnauthorized, "Authorization token missing", []string{err.Error()})
+			if se, ok := model.IsServiceError(err); ok {
+				return c.Status(se.StatusCode).JSON(response.NewErrorResponseDto(se))
+			}
+			return c.Status(fiber.StatusUnauthorized).JSON(response.ErrorResponseDto{
+				Status:  fiber.StatusUnauthorized,
+				Message: "Authorization token missing",
+			})
 		}
 
 		user, err := userService.ParseAndValidateToken(tokenString)
 		if err != nil {
-			return response.NewHttpError(fiber.StatusUnauthorized, "Invalid or expired token", []string{err.Error()})
+			if se, ok := model.IsServiceError(err); ok {
+				return c.Status(se.StatusCode).JSON(response.NewErrorResponseDto(se))
+			}
+			return c.Status(fiber.StatusUnauthorized).JSON(response.ErrorResponseDto{
+				Status:  fiber.StatusUnauthorized,
+				Message: "Invalid or expired token",
+			})
 		}
 
 		c.Locals("user", user)

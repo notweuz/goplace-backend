@@ -55,9 +55,10 @@ func (s *PixelService) Create(c *fiber.Ctx, ctx context.Context, pixel *model.Pi
 	}
 
 	if (pixel.X > s.config.Sheet.Width) || (pixel.X < 1) || (pixel.Y > s.config.Sheet.Height) || (pixel.Y < 1) {
-		log.Error().Uint("x", pixel.X).Uint("y", pixel.Y).Interface("current size", s.config.Sheet).Msg("Pixel coordinates out of range")
-		return nil, fiber.NewError(fiber.StatusBadRequest,
-			fmt.Sprintf("pixel coordinates out of range: %d, %d / %d, %d", pixel.X, pixel.Y, s.config.Sheet.Width, s.config.Sheet.Height))
+		log.Error().Uint("x", pixel.X).Uint("y", pixel.Y).Uint("width", s.config.Sheet.Width).Uint("height", s.config.Sheet.Height).Msg("Pixel coordinates out of range")
+		return nil, model.NewBadRequestError(
+			fmt.Sprintf("Pixel coordinates out of range: %d, %d / %d, %d", pixel.X, pixel.Y, s.config.Sheet.Width, s.config.Sheet.Height),
+		)
 	}
 
 	isReady, dur, err := s.checkPlaceCooldown(author)
@@ -66,7 +67,7 @@ func (s *PixelService) Create(c *fiber.Ctx, ctx context.Context, pixel *model.Pi
 	}
 
 	if !isReady {
-		return nil, fiber.NewError(fiber.StatusTooManyRequests, fmt.Sprintf("Cannot create pixel, user is on cooldown for %s", dur.String()))
+		return nil, model.NewTooManyRequestsError(fmt.Sprintf("Cannot create pixel, user is on cooldown for %s", dur.String()))
 	}
 
 	pixel.UserID = author.ID
@@ -75,17 +76,18 @@ func (s *PixelService) Create(c *fiber.Ctx, ctx context.Context, pixel *model.Pi
 
 	_, err = s.userService.Update(ctx, author)
 	if err != nil {
-		log.Error().Int("amount placed", author.AmountPlaced).Time("last placed", author.LastPlaced).Err(err).Msg("Failed to update user after placing pixel")
-		return nil, err
+		log.Error().Int("amountPlaced", author.AmountPlaced).Time("lastPlaced", author.LastPlaced).Err(err).Msg("Failed to update user after placing pixel")
+		return nil, model.NewInternalServerError("Failed to update user after placing pixel", err)
 	}
 
-	log.Info().Uint("x", pixel.X).Uint("y", pixel.Y).Interface("color", pixel.Color).Msg("Creating pixel")
+	log.Info().Uint("x", pixel.X).Uint("y", pixel.Y).Str("color", pixel.Color).Msg("Creating pixel")
 	created, err := s.database.Create(ctx, pixel)
-	if err == nil {
-		go ws.BroadcastPixel("create", created)
+	if err != nil {
+		return nil, model.NewInternalServerError("Failed to create pixel", err)
 	}
 
-	return created, err
+	go ws.BroadcastPixel("create", created)
+	return created, nil
 }
 
 func (s *PixelService) Update(c *fiber.Ctx, ctx context.Context, pixel *model.Pixel) (*model.Pixel, error) {
@@ -105,16 +107,15 @@ func (s *PixelService) Update(c *fiber.Ctx, ctx context.Context, pixel *model.Pi
 	}
 
 	if !isReady {
-		return nil, fiber.NewError(fiber.StatusTooManyRequests, fmt.Sprintf("Cannot create pixel, user is on cooldown for %s", dur.String()))
+		return nil, model.NewTooManyRequestsError(fmt.Sprintf("Cannot update pixel, user is on cooldown for %s", dur.String()))
 	}
 
 	oldPixel, err := s.GetByID(ctx, pixel.ID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			log.Error().Uint("id", pixel.ID).Msg("Pixel not found")
-			return nil, fiber.NewError(fiber.StatusNotFound, "Pixel not found")
+			return nil, model.NewNotFoundError("Pixel not found")
 		}
-		log.Error().Err(err).Msg("Failed to get pixel by ID")
 		return nil, err
 	}
 
@@ -126,42 +127,66 @@ func (s *PixelService) Update(c *fiber.Ctx, ctx context.Context, pixel *model.Pi
 
 	_, err = s.userService.Update(ctx, author)
 	if err != nil {
-		log.Error().Int("amount placed", author.AmountPlaced).Time("last placed", author.LastPlaced).Err(err).Msg("Failed to update user after placing pixel")
-		return nil, err
+		log.Error().Int("amountPlaced", author.AmountPlaced).Time("lastPlaced", author.LastPlaced).Err(err).Msg("Failed to update user after placing pixel")
+		return nil, model.NewInternalServerError("Failed to update user after placing pixel", err)
 	}
 
-	log.Info().Uint("id", pixel.ID).Uint("x", pixel.X).Uint("y", pixel.Y).Interface("color", pixel.Color).Msg("Updating pixel")
+	log.Info().Uint("id", pixel.ID).Uint("x", pixel.X).Uint("y", pixel.Y).Str("color", pixel.Color).Msg("Updating pixel")
 	updated, err := s.database.Update(ctx, pixel)
-	if err == nil {
-		go ws.BroadcastPixel("update", updated)
+	if err != nil {
+		return nil, model.NewInternalServerError("Failed to update pixel", err)
 	}
 
-	return updated, err
+	go ws.BroadcastPixel("update", updated)
+	return updated, nil
 }
 
 func (s *PixelService) GetByID(ctx context.Context, id uint) (*model.Pixel, error) {
 	log.Info().Uint("id", id).Msg("Getting pixel by ID")
-	return s.database.GetByID(ctx, id)
+	pixel, err := s.database.GetByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, model.NewNotFoundError("Pixel not found")
+		}
+		return nil, model.NewInternalServerError("Failed to get pixel", err)
+	}
+	return pixel, nil
 }
 
 func (s *PixelService) GetAll(ctx context.Context) ([]model.Pixel, error) {
 	log.Info().Msg("Getting all pixels")
-	return s.database.GetAll(ctx)
+	pixels, err := s.database.GetAll(ctx)
+	if err != nil {
+		return nil, model.NewInternalServerError("Failed to fetch pixels", err)
+	}
+	return pixels, nil
 }
 
 func (s *PixelService) GetByCoordinates(ctx context.Context, x, y uint) (*model.Pixel, error) {
 	log.Info().Uint("x", x).Uint("y", y).Msg("Getting pixel by coordinates")
 	if (x > s.config.Sheet.Width) || (x < 1) || (y > s.config.Sheet.Height) || (y < 1) {
-		log.Error().Uint("x", x).Uint("y", y).Interface("current size", s.config.Sheet).Msg("Pixel coordinates out of range")
-		return nil, fiber.NewError(fiber.StatusBadRequest,
-			fmt.Sprintf("pixel coordinates out of range: %d, %d / %d, %d", x, y, s.config.Sheet.Width, s.config.Sheet.Height))
+		log.Error().Uint("x", x).Uint("y", y).Uint("width", s.config.Sheet.Width).Uint("height", s.config.Sheet.Height).Msg("Pixel coordinates out of range")
+		return nil, model.NewBadRequestError(
+			fmt.Sprintf("Pixel coordinates out of range: %d, %d / %d, %d", x, y, s.config.Sheet.Width, s.config.Sheet.Height),
+		)
 	}
-	return s.database.GetByCoordinates(ctx, x, y)
+	pixel, err := s.database.GetByCoordinates(ctx, x, y)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, model.NewNotFoundError("Pixel not found")
+		}
+		return nil, model.NewInternalServerError("Failed to get pixel", err)
+	}
+	return pixel, nil
 }
 
 func (s *PixelService) GetAllByUser(ctx context.Context, userId uint) ([]model.Pixel, error) {
 	log.Info().Uint("userId", userId).Msg("Getting all pixels by user ID")
-	return s.database.GetAllByUserID(ctx, userId)
+	pixels, err := s.database.GetAllByUserID(ctx, userId)
+	if err != nil {
+		return nil, model.NewInternalServerError("Failed to get user pixels", err)
+	}
+	return pixels, nil
 }
 
 func (s *PixelService) GetAllByUserSelf(c *fiber.Ctx, ctx context.Context) ([]model.Pixel, error) {
@@ -171,17 +196,16 @@ func (s *PixelService) GetAllByUserSelf(c *fiber.Ctx, ctx context.Context) ([]mo
 	}
 
 	log.Info().Uint("userId", user.ID).Msg("Getting all pixels by self user ID")
-	return s.database.GetAllByUserID(ctx, user.ID)
+	pixels, err := s.database.GetAllByUserID(ctx, user.ID)
+	if err != nil {
+		return nil, model.NewInternalServerError("Failed to get user pixels", err)
+	}
+	return pixels, nil
 }
 
 func (s *PixelService) DeleteByCoordinates(c *fiber.Ctx, ctx context.Context, x, y uint) error {
 	pixel, err := s.GetByCoordinates(ctx, x, y)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Error().Uint("x", x).Uint("y", y).Msg("Pixel not found")
-			return fiber.NewError(fiber.StatusNotFound, "Pixel not found")
-		}
-		log.Error().Err(err).Uint("x", x).Uint("y", y).Msg("Failed to get pixel by coordinates")
 		return err
 	}
 
@@ -206,25 +230,25 @@ func (s *PixelService) Delete(c *fiber.Ctx, ctx context.Context, id uint) error 
 	}
 
 	if !isReady {
-		return fiber.NewError(fiber.StatusTooManyRequests, fmt.Sprintf("Cannot create pixel, user is on cooldown for %s", dur.String()))
+		return model.NewTooManyRequestsError(fmt.Sprintf("Cannot delete pixel, user is on cooldown for %s", dur.String()))
 	}
 
 	err = s.database.Delete(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			log.Error().Uint("id", id).Msg("Pixel not found")
-			return fiber.NewError(fiber.StatusNotFound, "Pixel not found")
+			return model.NewNotFoundError("Pixel not found")
 		}
 		log.Error().Err(err).Uint("id", id).Msg("Failed to delete pixel")
-		return err
+		return model.NewInternalServerError("Failed to delete pixel", err)
 	}
 
 	user.LastPlaced = time.Now()
 	user.AmountPlaced++
 	_, err = s.userService.Update(ctx, user)
 	if err != nil {
-		log.Error().Int("amount placed", user.AmountPlaced).Time("last placed", user.LastPlaced).Err(err).Msg("Failed to update user after placing pixel")
-		return err
+		log.Error().Int("amountPlaced", user.AmountPlaced).Time("lastPlaced", user.LastPlaced).Err(err).Msg("Failed to update user after deleting pixel")
+		return model.NewInternalServerError("Failed to update user after deleting pixel", err)
 	}
 
 	log.Info().Uint("id", id).Msg("Deleted pixel")
@@ -250,7 +274,7 @@ func (s *PixelService) checkPlaceCooldown(user *model.User) (bool, time.Duration
 		Bool("isAdmin", user.Admin).
 		Msg("Cooldown check")
 
-	return canPlace, cooldown, nil
+	return canPlace, cooldown - elapsed, nil
 }
 
 func (s *PixelService) CheckIsUserAccountActive(user *model.User) error {
@@ -259,10 +283,10 @@ func (s *PixelService) CheckIsUserAccountActive(user *model.User) error {
 	}
 
 	if !user.Active {
-		return fiber.NewError(fiber.StatusForbidden, "User account is deactivated")
+		return model.NewForbiddenError("User account is deactivated")
 	}
 	if user.Banned {
-		return fiber.NewError(fiber.StatusForbidden, "User account is banned")
+		return model.NewForbiddenError("User account is banned")
 	}
 
 	return nil
