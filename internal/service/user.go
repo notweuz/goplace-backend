@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"pplace_backend/internal/config"
-	"pplace_backend/internal/database"
-	"pplace_backend/internal/model"
+	"goplace_backend/internal/config"
+	"goplace_backend/internal/database"
+	"goplace_backend/internal/model"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"

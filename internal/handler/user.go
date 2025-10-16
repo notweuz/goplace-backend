@@ -1,10 +1,10 @@
 package handler
 
 import (
-	"pplace_backend/internal/model/dto/request"
-	"pplace_backend/internal/model/dto/response"
-	"pplace_backend/internal/service"
-	"pplace_backend/internal/validation"
+	"goplace_backend/internal/model/dto/request"
+	"goplace_backend/internal/model/dto/response"
+	"goplace_backend/internal/service"
+	"goplace_backend/internal/validation"
 
 	"github.com/gofiber/fiber/v2"
 )

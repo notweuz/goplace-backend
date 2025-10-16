@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"pplace_backend/internal/model"
-	"pplace_backend/internal/model/dto/response"
+	"goplace_backend/internal/model"
+	"goplace_backend/internal/model/dto/response"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog/log"

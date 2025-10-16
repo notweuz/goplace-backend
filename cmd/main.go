@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"os"
 
-	config2 "pplace_backend/internal/config"
-	"pplace_backend/internal/middleware"
-	"pplace_backend/internal/model"
-	"pplace_backend/internal/service"
-	"pplace_backend/internal/transport"
-	"pplace_backend/internal/ws"
+	config2 "goplace_backend/internal/config"
+	"goplace_backend/internal/middleware"
+	"goplace_backend/internal/model"
+	"goplace_backend/internal/service"
+	"goplace_backend/internal/transport"
+	"goplace_backend/internal/ws"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"

@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"pplace_backend/internal/model"
-	"pplace_backend/internal/model/dto/ws"
+	"goplace_backend/internal/model"
+	"goplace_backend/internal/model/dto/ws"
 
 	"github.com/rs/zerolog/log"
 )

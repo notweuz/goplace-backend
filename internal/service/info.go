@@ -1,8 +1,8 @@
 package service
 
 import (
-	"pplace_backend/internal/config"
-	"pplace_backend/internal/model/dto/response"
+	"goplace_backend/internal/config"
+	"goplace_backend/internal/model/dto/response"
 
 	"github.com/rs/zerolog/log"
 )

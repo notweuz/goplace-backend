@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"pplace_backend/internal/config"
-	"pplace_backend/internal/model"
-	"pplace_backend/internal/model/dto/request"
-	"pplace_backend/internal/model/dto/response"
+	"goplace_backend/internal/config"
+	"goplace_backend/internal/model"
+	"goplace_backend/internal/model/dto/request"
+	"goplace_backend/internal/model/dto/response"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/rs/zerolog/log"

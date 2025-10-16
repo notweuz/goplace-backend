@@ -3,7 +3,7 @@ package database
 import (
 	"context"
 
-	"pplace_backend/internal/model"
+	"goplace_backend/internal/model"
 
 	"gorm.io/gorm"
 )

@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"pplace_backend/internal/service"
+	"goplace_backend/internal/service"
 
 	"github.com/gofiber/fiber/v2"
 )

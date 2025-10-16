@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"pplace_backend/internal/config"
-	"pplace_backend/internal/database"
-	"pplace_backend/internal/model"
-	"pplace_backend/internal/ws"
+	"goplace_backend/internal/config"
+	"goplace_backend/internal/database"
+	"goplace_backend/internal/model"
+	"goplace_backend/internal/ws"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog/log"
