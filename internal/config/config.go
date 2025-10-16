@@ -13,7 +13,7 @@ type JWTConfig struct {
 	Expiration int    `yaml:"expiration"`
 }
 
-type PPlaceConfig struct {
+type GoPlaceConfig struct {
 	Port     uint           `yaml:"port"`
 	Version  string         `yaml:"version"`
 	LogLevel string         `yaml:"log_level"`
@@ -29,5 +29,5 @@ type SheetConfig struct {
 }
 
 type Config struct {
-	PPlace PPlaceConfig `yaml:"pplace"`
+	GoPlace GoPlaceConfig `yaml:"goplace"`
 }

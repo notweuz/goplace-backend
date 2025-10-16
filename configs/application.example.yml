@@ -1,4 +1,4 @@
-pplace:
+goplace:
   port: 8080
   version: "1.0-dev"
   log_level: "info"
@@ -11,7 +11,7 @@ pplace:
     port: 5432
     user: "user"
     password: "pass"
-    dbname: "pplace"
+    dbname: "goplace"
   jwt:
     secret: "code"
     expiration: 720

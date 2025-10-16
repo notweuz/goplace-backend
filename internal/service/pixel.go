@@ -18,11 +18,11 @@ import (
 
 type PixelService struct {
 	database    *database.PixelDatabase
-	config      *config.PPlaceConfig
+	config      *config.GoPlaceConfig
 	userService *UserService
 }
 
-func NewPixelService(db *gorm.DB, config *config.PPlaceConfig, userService *UserService) *PixelService {
+func NewPixelService(db *gorm.DB, config *config.GoPlaceConfig, userService *UserService) *PixelService {
 	pixelDatabase := database.NewPixelDatabase(db)
 	return &PixelService{
 		database:    pixelDatabase,

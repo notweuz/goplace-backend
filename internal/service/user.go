@@ -18,10 +18,10 @@ import (
 
 type UserService struct {
 	database *database.UserDatabase
-	config   *config.PPlaceConfig
+	config   *config.GoPlaceConfig
 }
 
-func NewUserService(db *gorm.DB, c *config.PPlaceConfig) *UserService {
+func NewUserService(db *gorm.DB, c *config.GoPlaceConfig) *UserService {
 	userDatabase := database.NewUserDatabase(db)
 	return &UserService{database: userDatabase, config: c}
 }

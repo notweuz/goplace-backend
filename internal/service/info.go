@@ -8,10 +8,10 @@ import (
 )
 
 type InfoService struct {
-	config *config.PPlaceConfig
+	config *config.GoPlaceConfig
 }
 
-func NewInfoService(config *config.PPlaceConfig) *InfoService {
+func NewInfoService(config *config.GoPlaceConfig) *InfoService {
 	return &InfoService{config: config}
 }
 

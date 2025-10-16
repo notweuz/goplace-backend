@@ -24,7 +24,7 @@ import (
 
 func main() {
 	setupLogger()
-	log.Info().Msg("Starting pplace server")
+	log.Info().Msg("Starting goplace server")
 
 	data, err := os.ReadFile("configs/application.yml")
 	if err != nil {
@@ -39,15 +39,15 @@ func main() {
 	}
 	log.Info().Msg("Parsed application configuration")
 
-	level, err := zerolog.ParseLevel(config.PPlace.LogLevel)
+	level, err := zerolog.ParseLevel(config.GoPlace.LogLevel)
 	if err != nil {
-		log.Error().Str("originalLogLevel", config.PPlace.LogLevel).Msg("Failed to parse log level, fallback to info level. Maybe a typo?")
+		log.Error().Str("originalLogLevel", config.GoPlace.LogLevel).Msg("Failed to parse log level, fallback to info level. Maybe a typo?")
 		level = zerolog.InfoLevel
 	}
 	zerolog.SetGlobalLevel(level)
 	log.Info().Msgf("Set log level to %s", level.String())
 
-	dbConfig := config.PPlace.Database
+	dbConfig := config.GoPlace.Database
 	dsn := fmt.Sprintf("host=%v user=%v password=%v dbname=%v port=%v sslmode=disable", dbConfig.Host, dbConfig.User, dbConfig.Password, dbConfig.DBName, dbConfig.Port)
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
@@ -70,10 +70,10 @@ func main() {
 	app.Use(cors.New())
 	log.Info().Msg("Initializing fiber application")
 
-	userService := service.NewUserService(db, &config.PPlace)
-	authService := service.NewAuthService(userService, &config.PPlace)
-	pixelService := service.NewPixelService(db, &config.PPlace, userService)
-	infoService := service.NewInfoService(&config.PPlace)
+	userService := service.NewUserService(db, &config.GoPlace)
+	authService := service.NewAuthService(userService, &config.GoPlace)
+	pixelService := service.NewPixelService(db, &config.GoPlace, userService)
+	infoService := service.NewInfoService(&config.GoPlace)
 
 	ws.Start()
 
@@ -83,8 +83,8 @@ func main() {
 	transport.SetupPixelRoutes(api, pixelService, userService)
 	transport.SetupInfoRoutes(api, infoService)
 
-	log.Info().Msgf("Starting server on port %d", config.PPlace.Port)
-	log.Fatal().Err(app.Listen(fmt.Sprintf(":%d", config.PPlace.Port)))
+	log.Info().Msgf("Starting server on port %d", config.GoPlace.Port)
+	log.Fatal().Err(app.Listen(fmt.Sprintf(":%d", config.GoPlace.Port)))
 }
 
 func setupLogger() {

@@ -1,6 +1,6 @@
 package response
 
-import "pplace_backend/internal/config"
+import "goplace_backend/internal/config"
 
 type SheetInfoDto struct {
 	Version string             `json:"version"`

@@ -17,10 +17,10 @@ import (
 
 type AuthService struct {
 	userService *UserService
-	config      *config.PPlaceConfig
+	config      *config.GoPlaceConfig
 }
 
-func NewAuthService(userService *UserService, config *config.PPlaceConfig) *AuthService {
+func NewAuthService(userService *UserService, config *config.GoPlaceConfig) *AuthService {
 	return &AuthService{userService: userService, config: config}
 }
 
@@ -92,7 +92,7 @@ func (s *AuthService) generateToken(user *model.User) (string, error) {
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * time.Duration(s.config.JWT.Expiration))),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			Issuer:    "pplace_backend",
+			Issuer:    "goplace_backend",
 			Subject:   fmt.Sprintf("%d", user.ID),
 		},
 	}

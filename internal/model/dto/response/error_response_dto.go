@@ -1,6 +1,6 @@
 package response
 
-import "pplace_backend/internal/model"
+import "goplace_backend/internal/model"
 
 type ErrorResponseDto struct {
 	Status  int      `json:"status"`
