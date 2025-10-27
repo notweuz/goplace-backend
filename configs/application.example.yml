@@ -12,6 +12,7 @@ goplace:
     user: "user"
     password: "pass"
     dbname: "goplace"
+    ssl_mode: "disable"
   jwt:
     secret: "code"
     expiration: 720

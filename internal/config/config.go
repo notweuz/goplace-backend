@@ -13,6 +13,7 @@ type DatabaseConfig struct {
 	User     string `yaml:"user"`
 	Password string `yaml:"password"`
 	DBName   string `yaml:"dbname"`
+	SSLMode  string `yaml:"ssl_mode"`
 }
 
 type JWTConfig struct {
