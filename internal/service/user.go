@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	"goplace_backend/internal/config"
+
 	"goplace_backend/internal/database"
 	"goplace_backend/internal/model"
 
@@ -18,12 +18,11 @@ import (
 
 type UserService struct {
 	database *database.UserDatabase
-	config   *config.GoPlaceConfig
 }
 
-func NewUserService(db *gorm.DB, c *config.GoPlaceConfig) *UserService {
+func NewUserService(db *gorm.DB) *UserService {
 	userDatabase := database.NewUserDatabase(db)
-	return &UserService{database: userDatabase, config: c}
+	return &UserService{database: userDatabase}
 }
 
 func (s *UserService) Create(ctx context.Context, user *model.User) (*model.User, error) {
@@ -145,7 +144,7 @@ func (s *UserService) ParseAndValidateToken(tokenString string) (*model.User, er
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, model.NewBadRequestError("Unexpected signing method", fmt.Sprintf("unexpected signing method: %v", token.Header["alg"]))
 		}
-		return []byte(s.config.JWT.Secret), nil
+		return []byte(config.GetGoPlace().JWT.Secret), nil
 	})
 	if err != nil || !token.Valid {
 		return nil, model.NewUnauthorizedError("Invalid token")

@@ -8,17 +8,16 @@ import (
 )
 
 type InfoService struct {
-	config *config.GoPlaceConfig
 }
 
-func NewInfoService(config *config.GoPlaceConfig) *InfoService {
-	return &InfoService{config: config}
+func NewInfoService() *InfoService {
+	return &InfoService{}
 }
 
 func (s *InfoService) GetPixelSheetInfo() response.SheetInfoDto {
-	log.Info().Interface("version", s.config.Version).Interface("sheet", s.config.Sheet).Msg("Fetching service info")
+	log.Info().Interface("version", config.GetGoPlace().Version).Interface("sheet", config.GetGoPlace().Sheet).Msg("Fetching service info")
 	return response.SheetInfoDto{
-		Size:    s.config.Sheet,
-		Version: s.config.Version,
+		Size:    config.GetGoPlace().Sheet,
+		Version: config.GetGoPlace().Version,
 	}
 }

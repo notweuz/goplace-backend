@@ -17,11 +17,10 @@ import (
 
 type AuthService struct {
 	userService *UserService
-	config      *config.GoPlaceConfig
 }
 
-func NewAuthService(userService *UserService, config *config.GoPlaceConfig) *AuthService {
-	return &AuthService{userService: userService, config: config}
+func NewAuthService(userService *UserService) *AuthService {
+	return &AuthService{userService: userService}
 }
 
 func (s *AuthService) Register(ctx context.Context, dto request.AuthDto) (*response.AuthTokenDto, error) {
@@ -90,7 +89,7 @@ func (s *AuthService) generateToken(user *model.User) (string, error) {
 		ID:           user.ID,
 		TokenVersion: user.TokenVersion,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * time.Duration(s.config.JWT.Expiration))),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * time.Duration(config.GetGoPlace().JWT.Expiration))),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			Issuer:    "goplace_backend",
 			Subject:   fmt.Sprintf("%d", user.ID),
@@ -98,5 +97,5 @@ func (s *AuthService) generateToken(user *model.User) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(s.config.JWT.Secret))
+	return token.SignedString([]byte(config.GetGoPlace().JWT.Secret))
 }

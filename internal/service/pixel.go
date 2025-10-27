@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"goplace_backend/internal/config"
 	"time"
 
-	"goplace_backend/internal/config"
 	"goplace_backend/internal/database"
 	"goplace_backend/internal/model"
 	"goplace_backend/internal/ws"
@@ -18,15 +18,13 @@ import (
 
 type PixelService struct {
 	database    *database.PixelDatabase
-	config      *config.GoPlaceConfig
 	userService *UserService
 }
 
-func NewPixelService(db *gorm.DB, config *config.GoPlaceConfig, userService *UserService) *PixelService {
+func NewPixelService(db *gorm.DB, userService *UserService) *PixelService {
 	pixelDatabase := database.NewPixelDatabase(db)
 	return &PixelService{
 		database:    pixelDatabase,
-		config:      config,
 		userService: userService,
 	}
 }
@@ -54,10 +52,10 @@ func (s *PixelService) Create(c *fiber.Ctx, ctx context.Context, pixel *model.Pi
 		return updatedPixel, nil
 	}
 
-	if (pixel.X > s.config.Sheet.Width) || (pixel.X < 1) || (pixel.Y > s.config.Sheet.Height) || (pixel.Y < 1) {
-		log.Error().Uint("x", pixel.X).Uint("y", pixel.Y).Uint("width", s.config.Sheet.Width).Uint("height", s.config.Sheet.Height).Msg("Pixel coordinates out of range")
+	if (pixel.X > config.GetGoPlace().Sheet.Width) || (pixel.X < 1) || (pixel.Y > config.GetGoPlace().Sheet.Height) || (pixel.Y < 1) {
+		log.Error().Uint("x", pixel.X).Uint("y", pixel.Y).Uint("width", config.GetGoPlace().Sheet.Width).Uint("height", config.GetGoPlace().Sheet.Height).Msg("Pixel coordinates out of range")
 		return nil, model.NewBadRequestError(
-			fmt.Sprintf("Pixel coordinates out of range: %d, %d / %d, %d", pixel.X, pixel.Y, s.config.Sheet.Width, s.config.Sheet.Height),
+			fmt.Sprintf("Pixel coordinates out of range: %d, %d / %d, %d", pixel.X, pixel.Y, config.GetGoPlace().Sheet.Width, config.GetGoPlace().Sheet.Height),
 		)
 	}
 
@@ -164,10 +162,10 @@ func (s *PixelService) GetAll(ctx context.Context) ([]model.Pixel, error) {
 
 func (s *PixelService) GetByCoordinates(ctx context.Context, x, y uint) (*model.Pixel, error) {
 	log.Info().Uint("x", x).Uint("y", y).Msg("Getting pixel by coordinates")
-	if (x > s.config.Sheet.Width) || (x < 1) || (y > s.config.Sheet.Height) || (y < 1) {
-		log.Error().Uint("x", x).Uint("y", y).Uint("width", s.config.Sheet.Width).Uint("height", s.config.Sheet.Height).Msg("Pixel coordinates out of range")
+	if (x > config.GetGoPlace().Sheet.Width) || (x < 1) || (y > config.GetGoPlace().Sheet.Height) || (y < 1) {
+		log.Error().Uint("x", x).Uint("y", y).Uint("width", config.GetGoPlace().Sheet.Width).Uint("height", config.GetGoPlace().Sheet.Height).Msg("Pixel coordinates out of range")
 		return nil, model.NewBadRequestError(
-			fmt.Sprintf("Pixel coordinates out of range: %d, %d / %d, %d", x, y, s.config.Sheet.Width, s.config.Sheet.Height),
+			fmt.Sprintf("Pixel coordinates out of range: %d, %d / %d, %d", x, y, config.GetGoPlace().Sheet.Width, config.GetGoPlace().Sheet.Height),
 		)
 	}
 	pixel, err := s.database.GetByCoordinates(ctx, x, y)
@@ -263,7 +261,7 @@ func (s *PixelService) checkPlaceCooldown(user *model.User) (bool, time.Duration
 
 	now := time.Now()
 	elapsed := now.Sub(user.LastPlaced)
-	cooldown := time.Duration(s.config.Sheet.PlaceCooldown) * time.Millisecond
+	cooldown := time.Duration(config.GetGoPlace().Sheet.PlaceCooldown) * time.Millisecond
 	canPlace := elapsed >= cooldown || user.Admin
 
 	log.Info().
